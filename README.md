@@ -15,6 +15,45 @@ mortgage_ts <- ts(MORTGAGE30US$MORTGAGE30US, start = c(1971, 4), frequency = 52)
 head(mortgage_ts)
 
 plot(mortgage_ts, main="Mortgage Rate Over Time", ylab="Mortgage Rate (%)", xlab="Year", col="blue")
+#model evaluation
+# Assuming mortgage_ts is already created
+train_length <- length(mortgage_ts) - 52  # Last year as test set
+train_ts <- window(mortgage_ts, end = c(1971 + (train_length - 1)/52))
+test_ts <- window(mortgage_ts, start = c(1971 + (train_length)/52))
+#Naive forecast
+naive_model <- naive(train_ts, h = 52)
+autoplot(naive_model) + autolayer(test_ts, series = "Test", PI = FALSE) +
+  ggtitle("Naive Forecast vs Actual")
+
+#Exponentialsmoothing 
+ets_model <- ets(train_ts)
+ets_forecast <- forecast(ets_model, h = 52)
+autoplot(ets_forecast) + autolayer(test_ts, series = "Test", PI = FALSE) +
+  ggtitle("ETS Forecast vs Actual")
+#Arima
+arima_model <- auto.arima(train_ts)
+arima_forecast <- forecast(arima_model, h = 52)
+autoplot(arima_forecast) + autolayer(test_ts, series = "Test", PI = FALSE) +
+  ggtitle("ARIMA Forecast vs Actual")
+# Compare tthe three
+naive_acc <- accuracy(naive_model, test_ts)
+ets_acc <- accuracy(ets_forecast, test_ts)
+arima_acc <- accuracy(arima_forecast, test_ts)
+
+comparison <- rbind(naive_acc[2,], ets_acc[2,], arima_acc[2,])
+rownames(comparison) <- c("Naive", "ETS", "ARIMA")
+comparison
+install.packages("flextable")
+library(flextable)
+library(dplyr)
+
+comparison_df <- as.data.frame(comparison) %>%
+  mutate(Model = rownames(comparison)) %>%
+  select(Model, everything())
+#Print a well formarted table
+flextable(comparison_df) %>%
+  autofit() %>%
+  set_caption("Forecast Accuracy Comparison: Naive vs ETS vs ARIMA")
 
 
 # Load necessary library for smoothing ma
